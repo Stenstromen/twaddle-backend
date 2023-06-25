@@ -3,6 +3,7 @@
 ## Set Python3 environment
 ```
 python3 -m venv twaddlevenv
+source twaddlevenv/source/activate
 ```
 
 ## Install requirements
