@@ -4,11 +4,14 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
+#gpt2model = "gpt2-large"
+gpt2model = "gpt2-medium"
+
 app = Flask(__name__)
 
 # Load pre-trained model
-tokenizer = GPT2Tokenizer.from_pretrained('gpt2-large')
-model = GPT2LMHeadModel.from_pretrained('gpt2-large')
+tokenizer = GPT2Tokenizer.from_pretrained(gpt2model)
+model = GPT2LMHeadModel.from_pretrained(gpt2model)
 
 cors_origins = os.getenv('CORS_ORIGINS').split(',')
 cors = CORS(app, resources={r"/generate": {"origins": cors_origins}}, supports_credentials=True)
@@ -23,8 +26,11 @@ def generate_text():
 
     # Generate a single token
     output = model.generate(encoded_input['input_ids'], 
+                            repetition_penalty=1.2,  # higher penalty encourages model to avoid repeating itself
                             max_length=len(encoded_input['input_ids'][0])+1, 
-                            temperature=0.7, 
+                            temperature=0.5,  # lower temperature
+                            top_k=30,  # add top-k sampling
+                            top_p=0.98,  # add top-p sampling
                             num_return_sequences=1,
                             do_sample=True,
                             attention_mask=encoded_input['attention_mask'])
