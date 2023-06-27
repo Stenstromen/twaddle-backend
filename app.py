@@ -1,20 +1,29 @@
+import logging
 import os
 import re
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-#gpt2model = "gpt2-large"
-gpt2model = "gpt2-medium"
+logging.getLogger('transformers').setLevel(logging.ERROR)
+
+gpt2model = "gpt2"
 
 app = Flask(__name__)
 
 # Load pre-trained model
-tokenizer = GPT2Tokenizer.from_pretrained(gpt2model)
-model = GPT2LMHeadModel.from_pretrained(gpt2model)
+tokenizer = GPT2Tokenizer.from_pretrained(gpt2model, cache_dir='./models')
+model = GPT2LMHeadModel.from_pretrained(gpt2model, cache_dir='./models')
 
 cors_origins = os.getenv('CORS_ORIGINS').split(',')
 cors = CORS(app, resources={r"/generate": {"origins": cors_origins}}, supports_credentials=True)
+@app.before_request
+def before_request():
+    # Ignore authentication for OPTIONS requests
+    if request.method != 'OPTIONS':
+        # Check authorization key
+        if request.headers.get('authorization') != os.getenv('AUTHORIZATION_KEY'):
+            return 'Unauthorized', 401
 
 @app.route('/generate', methods=['POST'])
 def generate_text():
