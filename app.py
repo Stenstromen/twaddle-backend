@@ -7,7 +7,7 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 logging.getLogger('transformers').setLevel(logging.ERROR)
 
-gpt2model = "gpt2"
+gpt2model = "distilgpt2"
 
 app = Flask(__name__)
 
