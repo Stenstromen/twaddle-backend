@@ -21,4 +21,4 @@ RUN pip install --no-cache-dir gunicorn
 EXPOSE 80
 
 # Run the command to start gunicorn
-CMD ["gunicorn", "-b", "0.0.0.0:80", "app:app"]
+CMD ["gunicorn", "-b", "0.0.0.0:80", "--timeout", "300", "app:app"]
