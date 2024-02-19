@@ -1,57 +1,59 @@
-import logging
 import os
-import re
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import warnings
+import torch
+from flask import Flask, request
+from flask_socketio import SocketIO, emit
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-logging.getLogger('transformers').setLevel(logging.ERROR)
+authorization_key = os.getenv('AUTHORIZATION_KEY')
+cors_origins = os.getenv('CORS_ORIGINS')
+app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins=cors_origins)
 
 gpt2model = "distilgpt2"
-
-app = Flask(__name__)
-
-# Load pre-trained model
 tokenizer = GPT2Tokenizer.from_pretrained(gpt2model, cache_dir='./models')
 model = GPT2LMHeadModel.from_pretrained(gpt2model, cache_dir='./models')
 
-cors_origins = os.getenv('CORS_ORIGINS').split(',')
-cors = CORS(app, resources={r"/generate": {"origins": cors_origins}}, supports_credentials=True)
-@app.before_request
-def before_request():
-    # Ignore authentication for OPTIONS requests
-    if request.method != 'OPTIONS':
-        # Check authorization key
-        if request.headers.get('authorization') != os.getenv('AUTHORIZATION_KEY'):
-            return 'Unauthorized', 401
+@socketio.on('connect')
+def connect():
+    auth_token = request.args.get('auth')
+    if not auth_token or auth_token != authorization_key:
+        return False
 
-@app.route('/generate', methods=['POST'])
-def generate_text():
-    data = request.get_json()
-    input_text = data.get('input')
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
 
-    # Encode input context
-    encoded_input = tokenizer.encode_plus(input_text, return_tensors='pt')
+@socketio.on('generate')
+def handle_generate(data):
+    input_text = data['input']
+    input_ids = tokenizer.encode(input_text, return_tensors='pt', add_special_tokens=True)
 
-    # Generate a single token
-    output = model.generate(encoded_input['input_ids'], 
-                            repetition_penalty=1.2,  # higher penalty encourages model to avoid repeating itself
-                            max_length=len(encoded_input['input_ids'][0])+1, 
-                            temperature=0.5,  # lower temperature
-                            top_k=30,  # add top-k sampling
-                            top_p=0.98,  # add top-p sampling
-                            num_return_sequences=1,
-                            do_sample=True,
-                            attention_mask=encoded_input['attention_mask'])
+    new_user_input_ids = input_ids
 
-    # Decode the generated token
-    output_token = tokenizer.decode(output[0][-1], skip_special_tokens=True)
+    max_length: int = data['max_length']
 
-        # Replace multiple newlines with a single newline
-    output_token = re.sub('\n+', '\n', output_token)
+    print("Generating...")
 
-    return jsonify({'output': output_token})
+    for _ in range(max_length):
+        output = model.generate(new_user_input_ids, max_length=1, pad_token_id=tokenizer.eos_token_id, do_sample=True)
+        
+        next_token_id = output[:, -1].item()
+        next_token = tokenizer.decode(next_token_id)
+        
+        emit('generated', {'output': next_token})
+        
+        if next_token_id == tokenizer.eos_token_id:
+            break
+        
+        output_token_ids = output[:, -1].unsqueeze(-1)
+
+        new_user_input_ids = torch.cat([new_user_input_ids, output_token_ids], dim=-1)
+
+    print("Generation complete.")
+    emit('generated', {'output': 'Generation complete.'})
+
+warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
-
+    socketio.run(app, host='0.0.0.0', port=8080)
