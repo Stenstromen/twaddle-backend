@@ -1,6 +1,7 @@
 import os
 import warnings
 import torch
+import logging
 from flask import Flask, request
 from flask_socketio import SocketIO, emit
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
@@ -54,6 +55,8 @@ def handle_generate(data):
     emit('generated', {'output': 'Generation complete.'})
 
 warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=8080)
+    socketio.run(app, host='0.0.0.0', port=8080, debug=False, allow_unsafe_werkzeug=True)
