@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 WORKDIR /app
-ADD . /app
+COPY app.py requirements.txt /app/
 ENV AUTHORIZATION_KEY "123"
 ENV CORS_ORIGINS "*"
 RUN pip install --no-cache-dir -r requirements.txt
