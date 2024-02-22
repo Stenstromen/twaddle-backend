@@ -18,7 +18,7 @@ python3 -m pip install -r requirements.txt
 ```bash
 AUTHORIZATION_KEY="lol" \
 CORS_ORIGINS="http://localhost:5173" \
-python3 gpt2.py
+python3 app.py
 ```
 
 ## `Socket.IO` Client Emit
@@ -48,7 +48,7 @@ python3 gpt2.py
 docker run --rm \
 -e CORS_ORIGINS="*" \
 -e AUTHORIZATION_KEY="lol" \
--p80:80 \
+-p80:8080 \
 -v $PWD/models/:/app/models \
 ghcr.io/stenstromen/twaddle-backend:latest
 ```

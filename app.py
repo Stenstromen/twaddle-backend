@@ -2,7 +2,7 @@ import os
 import warnings
 import torch
 import logging
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
@@ -53,6 +53,18 @@ def handle_generate(data):
 
     print("Generation complete.")
     emit('generated', {'output': 'Generation complete.'})
+
+@app.route('/status', methods=['GET'])
+def status():
+    return jsonify({'status': 'online'}), 200
+
+@app.route('/ready', methods=['GET'])
+def ready():
+    try:
+        _ = model.config
+        return jsonify({'ready': True}), 200
+    except Exception as e:
+        return jsonify({'ready': False, 'error': str(e)}), 500
 
 warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
 log = logging.getLogger('werkzeug')
