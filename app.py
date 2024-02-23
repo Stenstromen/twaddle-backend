@@ -15,17 +15,17 @@ gpt2model = "distilgpt2"
 tokenizer = GPT2Tokenizer.from_pretrained(gpt2model, cache_dir='./models')
 model = GPT2LMHeadModel.from_pretrained(gpt2model, cache_dir='./models')
 
-@socketio.on('connect')
+@socketio.on('connect', namespace='/')
 def connect():
     auth_token = request.args.get('auth')
     if not auth_token or auth_token != authorization_key:
         return False
 
-@socketio.on('disconnect')
+@socketio.on('disconnect', namespace='/')
 def handle_disconnect():
     print('Client disconnected')
 
-@socketio.on('generate')
+@socketio.on('generate', namespace='/')
 def handle_generate(data):
     input_text = data['input']
     input_ids = tokenizer.encode(input_text, return_tensors='pt', add_special_tokens=True)
@@ -37,7 +37,7 @@ def handle_generate(data):
     print("Generating...")
 
     for _ in range(max_length):
-        output = model.generate(new_user_input_ids, max_length=1, pad_token_id=tokenizer.eos_token_id, do_sample=True)
+        output = model.generate(new_user_input_ids, max_new_tokens=1, pad_token_id=tokenizer.eos_token_id, do_sample=True)
         
         next_token_id = output[:, -1].item()
         next_token = tokenizer.decode(next_token_id)
